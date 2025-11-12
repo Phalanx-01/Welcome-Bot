@@ -6,9 +6,7 @@ const fs = require('fs');
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.GuildVoiceStates
   ]
 });
 
@@ -72,18 +70,6 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
   }
 });
 
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-
-  if (message.content === '!ping') {
-    message.reply('Pong! Bot is online and monitoring voice channels.');
-  }
-
-  if (message.content === '!status') {
-    const voiceChannels = message.guild.channels.cache.filter(c => c.type === 2);
-    message.reply(`Monitoring ${voiceChannels.size} voice channel(s) in this server.`);
-  }
-});
 
 const token = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
 
