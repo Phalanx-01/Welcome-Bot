@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, entersState } = require('@discordjs/voice');
 const path = require('path');
 const fs = require('fs');
+const sodium = require('libsodium-wrappers');
 
 const client = new Client({
   intents: [
@@ -9,6 +10,11 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates
   ]
 });
+
+async function initBot() {
+  await sodium.ready;
+  console.log('Sodium encryption library initialized');
+}
 
 client.once('ready', () => {
   console.log(`Bot is ready! Logged in as ${client.user.tag}`);
@@ -78,7 +84,12 @@ if (!token) {
   process.exit(1);
 }
 
-client.login(token).catch(error => {
-  console.error('Failed to login:', error);
+initBot().then(() => {
+  client.login(token).catch(error => {
+    console.error('Failed to login:', error);
+    process.exit(1);
+  });
+}).catch(error => {
+  console.error('Failed to initialize bot:', error);
   process.exit(1);
 });
