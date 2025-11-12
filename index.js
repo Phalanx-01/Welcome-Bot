@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, VoiceConnectionStatus, entersState } = require('@discordjs/voice');
 const path = require('path');
 const fs = require('fs');
 
@@ -10,17 +10,17 @@ const client = new Client({
   ]
 });
 
-const activeConnections = new Map();
-
 client.once('ready', () => {
   console.log(`Bot is ready! Logged in as ${client.user.tag}`);
   console.log(`Monitoring voice channels in ${client.guilds.cache.size} server(s)`);
 });
 
 client.on('voiceStateUpdate', async (oldState, newState) => {
+  if (newState.member.user.bot) return;
+  
   const memberName = newState.member.user.tag;
   
-  if (!oldState.channelId && newState.channelId) {
+  if (oldState.channelId !== newState.channelId && newState.channelId) {
     console.log(`${memberName} joined voice channel: ${newState.channel.name}`);
     
     try {
@@ -30,9 +30,8 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
         adapterCreator: newState.guild.voiceAdapterCreator,
       });
 
-      connection.on(VoiceConnectionStatus.Ready, () => {
-        console.log('Voice connection is ready!');
-      });
+      await entersState(connection, VoiceConnectionStatus.Ready, 30000);
+      console.log('Voice connection is ready!');
 
       const player = createAudioPlayer();
       
