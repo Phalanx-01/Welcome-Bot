@@ -1,16 +1,17 @@
-const { Client, GatewayIntentBits } = require('discord.js');
-const { 
-  joinVoiceChannel, 
-  createAudioPlayer, 
-  createAudioResource, 
-  AudioPlayerStatus, 
-  VoiceConnectionStatus, 
-  entersState,
-  getVoiceConnection 
-} = require('@discordjs/voice');
 const path = require('path');
 const fs = require('fs');
 const sodium = require('libsodium-wrappers');
+
+const { Client, GatewayIntentBits } = require('discord.js');
+const {
+  joinVoiceChannel,
+  createAudioPlayer,
+  createAudioResource,
+  AudioPlayerStatus,
+  VoiceConnectionStatus,
+  entersState,
+  getVoiceConnection
+} = require('@discordjs/voice');
 
 const client = new Client({
   intents: [
@@ -28,8 +29,13 @@ process.on('unhandledRejection', (error) => {
 });
 
 async function initBot() {
-  await sodium.ready;
-  console.log('Sodium encryption library initialized');
+  console.log('Initializing Discord bot...');
+  try {
+    await sodium.ready;
+    console.log('Sodium encryption library ready');
+  } catch (error) {
+    console.log('Continuing without sodium optimization');
+  }
 }
 
 client.once('ready', () => {
@@ -39,7 +45,30 @@ client.once('ready', () => {
 
 async function playWelcomeSound(channel, memberName, retryCount = 0) {
   const maxRetries = 2;
-  
+
+  // Dynamically load all welcome sounds from the sounds folder
+  const soundsDir = path.join(__dirname, 'sounds');
+  let welcomeSounds = [];
+
+  try {
+    // Read all files from sounds directory
+    const files = fs.readdirSync(soundsDir);
+    // Filter for MP3 files that start with 'welcome'
+    welcomeSounds = files.filter(file =>
+      file.startsWith('welcome') && file.endsWith('.mp3')
+    );
+
+    if (welcomeSounds.length === 0) {
+      console.error('No welcome sounds found in sounds directory!');
+      return;
+    }
+
+    console.log(`Found ${welcomeSounds.length} welcome sound(s): ${welcomeSounds.join(', ')}`);
+  } catch (readError) {
+    console.error('Error reading sounds directory:', readError);
+    return;
+  }
+
   try {
     console.log(`[Attempt ${retryCount + 1}] Connecting to voice channel...`);
     
@@ -83,12 +112,25 @@ async function playWelcomeSound(channel, memberName, retryCount = 0) {
     console.log(`✅ Voice connection ready for ${memberName}`);
 
     const player = createAudioPlayer();
-    const soundPath = path.join(__dirname, 'sounds', 'welcome.mp3');
-    
+
+    // Randomly select a welcome sound
+    const randomSound = welcomeSounds[Math.floor(Math.random() * welcomeSounds.length)];
+    let soundPath = path.join(__dirname, 'sounds', randomSound);
+
     if (!fs.existsSync(soundPath)) {
-      console.error('Welcome sound file not found!');
-      connection.destroy();
-      return;
+      console.error(`Welcome sound file not found: ${randomSound}`);
+      // Try fallback to first sound if random selection doesn't exist
+      const fallbackPath = path.join(__dirname, 'sounds', welcomeSounds[0]);
+      if (!fs.existsSync(fallbackPath)) {
+        console.error('No welcome sound files found!');
+        connection.destroy();
+        return;
+      }
+      // Use fallback
+      console.log(`Using fallback sound: ${welcomeSounds[0]}`);
+      soundPath = fallbackPath;
+    } else {
+      console.log(`Playing welcome sound: ${randomSound}`);
     }
 
     console.log('Creating audio resource...');
