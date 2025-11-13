@@ -29,5 +29,5 @@ nul
 .DS_Store
 Thumbs.db
 
-# Claude AI files
+# Development files
 .claude/
