@@ -32,7 +32,7 @@ process.on('unhandledRejection', (error) => {
 });
 
 async function initBot() {
-  console.log('Initializing Discord bot...');
+  console.log('Initializing Rodis Discord bot...');
   try {
     await sodium.ready;
     console.log('Sodium encryption library ready');
@@ -42,13 +42,13 @@ async function initBot() {
 }
 
 client.once('ready', () => {
-  console.log(`Bot is ready! Logged in as ${client.user.tag}`);
-  console.log(`Monitoring voice channels in ${client.guilds.cache.size} server(s)`);
+  console.log(`Rodis Bot is ready! Logged in as ${client.user.tag}`);
+  console.log(`Monitoring messages in ${client.guilds.cache.size} server(s)`);
 });
 
-async function playWelcomeSound(channel, memberName, retryCount = 0) {
+async function playRodisSound(channel, memberName, retryCount = 0) {
   const maxRetries = 2;
-  const BOT_NAME = 'Rodulis Bot';
+  const BOT_NAME = 'Rodis Bot';
 
   // Wait for other bots to finish playing
   console.log(`${BOT_NAME}: Checking if other bots are playing...`);
@@ -60,25 +60,33 @@ async function playWelcomeSound(channel, memberName, retryCount = 0) {
     return;
   }
 
-  // Dynamically load all welcome sounds from the sounds folder
+  // Load rodis sound file
   const soundsDir = path.join(__dirname, 'sounds');
-  let welcomeSounds = [];
+  let rodisSounds = [];
 
   try {
     // Read all files from sounds directory
     const files = fs.readdirSync(soundsDir);
-    // Filter for MP3 files that start with 'welcome'
-    welcomeSounds = files.filter(file =>
-      file.startsWith('welcome') && file.endsWith('.mp3')
+    // Filter for MP3 files that start with 'rodis'
+    rodisSounds = files.filter(file =>
+      file.startsWith('rodis') && file.endsWith('.mp3')
     );
 
-    if (welcomeSounds.length === 0) {
-      console.error('No welcome sounds found in sounds directory!');
+    // If no rodis-specific sounds found, fall back to welcome sounds
+    if (rodisSounds.length === 0) {
+      console.log('No rodis sounds found, using welcome sounds as fallback');
+      rodisSounds = files.filter(file =>
+        file.startsWith('welcome') && file.endsWith('.mp3')
+      );
+    }
+
+    if (rodisSounds.length === 0) {
+      console.error('No sound files found in sounds directory!');
       releaseLock(); // Release lock on error
       return;
     }
 
-    console.log(`Found ${welcomeSounds.length} welcome sound(s): ${welcomeSounds.join(', ')}`);
+    console.log(`Found ${rodisSounds.length} sound(s) for Rodis: ${rodisSounds.join(', ')}`);
   } catch (readError) {
     console.error('Error reading sounds directory:', readError);
     releaseLock(); // Release lock on error
@@ -87,7 +95,7 @@ async function playWelcomeSound(channel, memberName, retryCount = 0) {
 
   try {
     console.log(`[Attempt ${retryCount + 1}] Connecting to voice channel...`);
-    
+
     const existingConnection = getVoiceConnection(channel.guild.id);
     if (existingConnection) {
       console.log('Destroying existing connection...');
@@ -129,38 +137,39 @@ async function playWelcomeSound(channel, memberName, retryCount = 0) {
 
     const player = createAudioPlayer();
 
-    // Randomly select a welcome sound
-    const randomSound = welcomeSounds[Math.floor(Math.random() * welcomeSounds.length)];
+    // Randomly select a sound
+    const randomSound = rodisSounds[Math.floor(Math.random() * rodisSounds.length)];
     let soundPath = path.join(__dirname, 'sounds', randomSound);
 
     if (!fs.existsSync(soundPath)) {
-      console.error(`Welcome sound file not found: ${randomSound}`);
+      console.error(`Sound file not found: ${randomSound}`);
       // Try fallback to first sound if random selection doesn't exist
-      const fallbackPath = path.join(__dirname, 'sounds', welcomeSounds[0]);
+      const fallbackPath = path.join(__dirname, 'sounds', rodisSounds[0]);
       if (!fs.existsSync(fallbackPath)) {
-        console.error('No welcome sound files found!');
+        console.error('No sound files found!');
         connection.destroy();
+        releaseLock(); // Release lock on error
         return;
       }
       // Use fallback
-      console.log(`Using fallback sound: ${welcomeSounds[0]}`);
+      console.log(`Using fallback sound: ${rodisSounds[0]}`);
       soundPath = fallbackPath;
     } else {
-      console.log(`Playing welcome sound: ${randomSound}`);
+      console.log(`Playing sound: ${randomSound}`);
     }
 
     console.log('Creating audio resource...');
     const resource = createAudioResource(soundPath, {
       inlineVolume: true
     });
-    
+
     if (resource.volume) {
       resource.volume.setVolume(1.0);
     }
 
     player.play(resource);
     connection.subscribe(player);
-    console.log('Playing welcome sound...');
+    console.log('Playing Rodis sound...');
 
     player.on(AudioPlayerStatus.Playing, () => {
       console.log('Audio is now playing!');
@@ -188,7 +197,7 @@ async function playWelcomeSound(channel, memberName, retryCount = 0) {
       console.log(`Retrying in 2 seconds...`);
       releaseLock(); // Release lock before retry
       await new Promise(resolve => setTimeout(resolve, 2000));
-      return playWelcomeSound(channel, memberName, retryCount + 1);
+      return playRodisSound(channel, memberName, retryCount + 1);
     }
 
     if (error.message.includes('IP discovery')) {
@@ -200,29 +209,14 @@ async function playWelcomeSound(channel, memberName, retryCount = 0) {
   }
 }
 
-client.on('voiceStateUpdate', async (oldState, newState) => {
-  if (newState.member.user.bot) return;
-
-  const memberName = newState.member.user.tag;
-
-  if (oldState.channelId !== newState.channelId && newState.channelId) {
-    console.log(`\n🎵 ${memberName} joined voice channel: ${newState.channel.name}`);
-    await playWelcomeSound(newState.channel, memberName);
-  }
-
-  if (oldState.channelId && !newState.channelId) {
-    console.log(`${memberName} left voice channel: ${oldState.channel.name}`);
-  }
-});
-
-// Listen for the "rodulis" keyword trigger
+// Listen for the "rodis" keyword trigger
 client.on('messageCreate', async (message) => {
   // Ignore bot messages
   if (message.author.bot) return;
 
-  // Check if message contains the keyword "rodulis" (case insensitive)
-  if (message.content.toLowerCase().includes('rodulis')) {
-    console.log(`\n🔊 Keyword "rodulis" triggered by ${message.author.tag}`);
+  // Check if message contains the keyword "rodis" (case insensitive)
+  if (message.content.toLowerCase().includes('rodis')) {
+    console.log(`\n🔊 Keyword "rodis" triggered by ${message.author.tag}`);
 
     // Check if the user is in a voice channel
     const member = message.member;
@@ -233,16 +227,16 @@ client.on('messageCreate', async (message) => {
     }
 
     console.log(`✅ User is in voice channel: ${member.voice.channel.name}`);
-    await playWelcomeSound(member.voice.channel, message.author.tag);
+    await playRodisSound(member.voice.channel, message.author.tag);
   }
 });
 
 
-const token = process.env.DISCORD_TOKEN || process.env.DISCORD_BOT_TOKEN;
+const token = process.env.RODIS_BOT_TOKEN;
 
 if (!token) {
   console.error('ERROR: No Discord bot token found!');
-  console.error('Please set DISCORD_TOKEN or DISCORD_BOT_TOKEN environment variable.');
+  console.error('Please set RODIS_BOT_TOKEN environment variable.');
   process.exit(1);
 }
 

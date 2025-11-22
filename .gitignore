@@ -31,3 +31,6 @@ Thumbs.db
 
 # Development files
 .claude/
+
+# Bot runtime files
+.bot-playing.lock

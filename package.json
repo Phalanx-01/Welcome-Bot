@@ -4,7 +4,10 @@
   "description": "Discord bot that plays a sound when someone joins a voice channel",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node start-both.js",
+    "start:rodulis": "node index.js",
+    "start:rodis": "node rodis-bot.js",
+    "start:both": "node start-both.js"
   },
   "keywords": ["discord", "bot", "voice", "welcome"],
   "author": "",
