@@ -16,7 +16,9 @@ const {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
   ]
 });
 
@@ -181,16 +183,38 @@ async function playWelcomeSound(channel, memberName, retryCount = 0) {
 
 client.on('voiceStateUpdate', async (oldState, newState) => {
   if (newState.member.user.bot) return;
-  
+
   const memberName = newState.member.user.tag;
-  
+
   if (oldState.channelId !== newState.channelId && newState.channelId) {
     console.log(`\n🎵 ${memberName} joined voice channel: ${newState.channel.name}`);
     await playWelcomeSound(newState.channel, memberName);
   }
-  
+
   if (oldState.channelId && !newState.channelId) {
     console.log(`${memberName} left voice channel: ${oldState.channel.name}`);
+  }
+});
+
+// Listen for the "rodulis" keyword trigger
+client.on('messageCreate', async (message) => {
+  // Ignore bot messages
+  if (message.author.bot) return;
+
+  // Check if message contains the keyword "rodulis" (case insensitive)
+  if (message.content.toLowerCase().includes('rodulis')) {
+    console.log(`\n🔊 Keyword "rodulis" triggered by ${message.author.tag}`);
+
+    // Check if the user is in a voice channel
+    const member = message.member;
+    if (!member || !member.voice.channel) {
+      console.log(`❌ User ${message.author.tag} is not in a voice channel`);
+      message.reply('You need to be in a voice channel to trigger the sound!').catch(console.error);
+      return;
+    }
+
+    console.log(`✅ User is in voice channel: ${member.voice.channel.name}`);
+    await playWelcomeSound(member.voice.channel, message.author.tag);
   }
 });
 
