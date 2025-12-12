@@ -26,8 +26,6 @@ async function initBot() {
   }
 }
 
-initBot();
-
 // Special user sound mapping
 const USER_SOUND_MAP = {
   'liakos74': 'nikos_liakos.mp3',
@@ -298,9 +296,22 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Login to Discord
-client.login(process.env.NIKOS_BOT_TOKEN)
-  .catch(error => {
+// Get bot token
+const token = process.env.NIKOS_BOT_TOKEN;
+
+if (!token) {
+  console.error('❌ ERROR: No Discord bot token found!');
+  console.error('Please set NIKOS_BOT_TOKEN environment variable.');
+  process.exit(1);
+}
+
+// Login to Discord after initialization
+initBot().then(() => {
+  client.login(token).catch(error => {
     console.error('❌ Failed to login:', error.message);
     process.exit(1);
   });
+}).catch(error => {
+  console.error('❌ Failed to initialize bot:', error);
+  process.exit(1);
+});
