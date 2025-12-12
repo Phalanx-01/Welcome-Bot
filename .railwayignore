@@ -1,6 +1,6 @@
-nul
 node_modules/
 .local/
 *.log
+*.md
 .env.local
 .DS_Store
