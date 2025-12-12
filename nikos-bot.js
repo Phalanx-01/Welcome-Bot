@@ -26,13 +26,13 @@ async function initBot() {
   }
 }
 
-// Special user sound mapping
-const USER_SOUND_MAP = {
-  'liakos74': 'nikos_liakos.mp3',
-  'p.theodoridis04': 'nikos_theo.mp3',
-  'ektelestis2012': 'nikos_ektelestis.mp3',
-  'valtonera1972_53348': 'nikos_valtonera.mp3',
-  'skywalker_lmr': 'nikos_luke.mp3'
+// Special user sound mapping (prefix pattern - will match all files starting with this)
+const USER_SOUND_PREFIX = {
+  'liakos74': 'nikos_liakos',
+  'p.theodoridis04': 'nikos_theo',
+  'ektelestis2012': 'nikos_ektelestis',
+  'valtonera1972_53348': 'nikos_valtonera',
+  'skywalker_lmr': 'nikos_luke'
 };
 
 // Track if we've already played for a user join (to coordinate with Rodulis)
@@ -50,12 +50,16 @@ setInterval(() => {
 
 // Function to get appropriate sound file for a user
 function getSoundForUser(username) {
-  // Check if user has a special sound
-  if (USER_SOUND_MAP[username]) {
-    const specialSoundPath = path.join(__dirname, 'sounds', USER_SOUND_MAP[username]);
-    if (fs.existsSync(specialSoundPath)) {
-      console.log(`🎵 Using special sound for ${username}: ${USER_SOUND_MAP[username]}`);
-      return USER_SOUND_MAP[username];
+  // Check if user has special sounds (find all files matching their prefix)
+  if (USER_SOUND_PREFIX[username]) {
+    const prefix = USER_SOUND_PREFIX[username];
+    const userSounds = fs.readdirSync(path.join(__dirname, 'sounds'))
+      .filter(file => file.startsWith(prefix) && file.endsWith('.mp3'));
+
+    if (userSounds.length > 0) {
+      const selectedSound = userSounds[Math.floor(Math.random() * userSounds.length)];
+      console.log(`🎵 Using special sound for ${username}: ${selectedSound} (${userSounds.length} available)`);
+      return selectedSound;
     }
   }
 
@@ -160,7 +164,7 @@ client.once('ready', () => {
   console.log(`📊 Monitoring ${client.guilds.cache.size} server(s) for voice events and messages`);
   console.log('🎯 Special sounds configured for: liakos74, p.theodoridis04, ektelestis2012, valtonera1972_53348, skywalker_lmr');
 
-  // Start 10-minute auto-play interval
+  // Start 30-minute auto-play interval
   startAutoPlayInterval();
 });
 
@@ -189,7 +193,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     recentlyJoinedUsers.set(joinKey, Date.now());
 
     // Only wait if user is not in special user list (Welcome bot handles others first)
-    const isSpecialUser = USER_SOUND_MAP[member.user.username];
+    const isSpecialUser = USER_SOUND_PREFIX[member.user.username];
     if (!isSpecialUser) {
       const delay = Math.random() * 2000 + 1000;
       console.log(`⏰ Waiting ${Math.round(delay)}ms before playing sound...`);
@@ -213,18 +217,18 @@ client.on('messageCreate', async message => {
 
     if (voiceChannel) {
       console.log(`💬 ${message.author.username} triggered Nikos Bot with keyword in ${message.channel.name}`);
-      await playNikosSound(voiceChannel, `Keyword by ${message.author.username}`, message.author.username);
+      await playNikosSound(voiceChannel, `Keyword by ${message.author.username}`, null);
     } else {
       console.log(`💬 ${message.author.username} said "nikos" but is not in a voice channel`);
     }
   }
 });
 
-// Auto-play function (every 10 minutes)
+// Auto-play function (every 30 minutes)
 function startAutoPlayInterval() {
-  const INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+  const INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
-  console.log('⏲️ Starting 10-minute auto-play interval for Nikos Bot');
+  console.log('⏲️ Starting 30-minute auto-play interval for Nikos Bot');
 
   setInterval(async () => {
     try {
@@ -233,12 +237,12 @@ function startAutoPlayInterval() {
 
       if (voiceChannel) {
         const userCount = voiceChannel.members.filter(member => !member.user.bot).size;
-        console.log(`⏰ 10-minute timer triggered! Found ${userCount} user(s) in ${voiceChannel.name}`);
+        console.log(`⏰ 30-minute timer triggered! Found ${userCount} user(s) in ${voiceChannel.name}`);
 
 
-        await playNikosSound(voiceChannel, 'Auto-play (10 min)', null); // null = generic sound only
+        await playNikosSound(voiceChannel, 'Auto-play (30 min)', null); // null = generic sound only
       } else {
-        console.log('⏰ 10-minute timer triggered, but no users in voice channels');
+        console.log('⏰ 30-minute timer triggered, but no users in voice channels');
       }
     } catch (error) {
       console.error('❌ Error in auto-play interval:', error);
