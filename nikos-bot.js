@@ -29,9 +29,10 @@ async function initBot() {
 // Special user sound mapping
 const USER_SOUND_MAP = {
   'liakos74': 'nikos_liakos.mp3',
-  'P_Theo04': 'nikos_theo.mp3',
+  'p.theodoridis04': 'nikos_theo.mp3',
   'ektelestis2012': 'nikos_ektelestis.mp3',
-  'valtonera1972': 'nikos_valtonera.mp3'
+  'valtonera1972_53348': 'nikos_valtonera.mp3',
+  'skywalker_lmr': 'nikos_luke.mp3'
 };
 
 // Track if we've already played for a user join (to coordinate with Rodulis)
@@ -157,7 +158,7 @@ async function playNikosSound(voiceChannel, triggerSource = 'Unknown', username 
 client.once('ready', () => {
   console.log(`✨ Nikos Bot is ready! Logged in as ${client.user.tag}`);
   console.log(`📊 Monitoring ${client.guilds.cache.size} server(s) for voice events and messages`);
-  console.log('🎯 Special sounds configured for: liakos74, P_Theo04, ektelestis2012, valtonera1972');
+  console.log('🎯 Special sounds configured for: liakos74, p.theodoridis04, ektelestis2012, valtonera1972_53348, skywalker_lmr');
 
   // Start 10-minute auto-play interval
   startAutoPlayInterval();
