@@ -167,7 +167,7 @@ client.once('ready', () => {
 // Voice state update event (user joins voice channel)
 client.on('voiceStateUpdate', async (oldState, newState) => {
   // Check if user joined a voice channel (was not in one before, now is in one)
-  if (!oldState.channelId && newState.channelId) {
+  if (oldState.channelId !== newState.channelId && newState.channelId) {
     const member = newState.member;
     const voiceChannel = newState.channel;
 
