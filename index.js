@@ -22,7 +22,8 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ]
 });
-// Users who should be handled by Nikos bot (skip welcome sound for these)const NIKOS_USERS = [  'liakos74',  'p.theodoridis04',  'ektelestis2012',  'valtonera1972_53348',  'skywalker_lmr'];
+// Users who should be handled by Nikos bot (skip welcome sound for these)
+const NIKOS_USERS = ['liakos74', 'p.theodoridis04', 'ektelestis2012', 'valtonera1972_53348', 'skywalker_lmr'];
 
 process.on('unhandledRejection', (error) => {
   if (error?.message?.includes('IP discovery')) {
