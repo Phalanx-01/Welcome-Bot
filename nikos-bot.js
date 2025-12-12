@@ -188,10 +188,13 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     // Mark this user as recently joined
     recentlyJoinedUsers.set(joinKey, Date.now());
 
-    // Wait a random time between 1-3 seconds (to coordinate with Rodulis)
-    const delay = Math.random() * 2000 + 1000;
-    console.log(`⏰ Waiting ${Math.round(delay)}ms before playing sound...`);
-    await new Promise(resolve => setTimeout(resolve, delay));
+    // Only wait if user is not in special user list (Welcome bot handles others first)
+    const isSpecialUser = USER_SOUND_MAP[member.user.username];
+    if (!isSpecialUser) {
+      const delay = Math.random() * 2000 + 1000;
+      console.log(`⏰ Waiting ${Math.round(delay)}ms before playing sound...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
 
     // Play sound for this user
     await playNikosSound(voiceChannel, `${member.user.username} joined`, member.user.username);
@@ -232,12 +235,8 @@ function startAutoPlayInterval() {
         const userCount = voiceChannel.members.filter(member => !member.user.bot).size;
         console.log(`⏰ 10-minute timer triggered! Found ${userCount} user(s) in ${voiceChannel.name}`);
 
-        // Pick a random user from the channel for sound selection
-        const users = voiceChannel.members.filter(member => !member.user.bot);
-        const randomUser = users.random();
-        const username = randomUser ? randomUser.user.username : null;
 
-        await playNikosSound(voiceChannel, 'Auto-play (10 min)', username);
+        await playNikosSound(voiceChannel, 'Auto-play (10 min)', null); // null = generic sound only
       } else {
         console.log('⏰ 10-minute timer triggered, but no users in voice channels');
       }

@@ -22,6 +22,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ]
 });
+// Users who should be handled by Nikos bot (skip welcome sound for these)const NIKOS_USERS = [  'liakos74',  'p.theodoridis04',  'ektelestis2012',  'valtonera1972_53348',  'skywalker_lmr'];
 
 process.on('unhandledRejection', (error) => {
   if (error?.message?.includes('IP discovery')) {
@@ -202,6 +203,13 @@ async function playWelcomeSound(channel, memberName, retryCount = 0) {
 
 client.on('voiceStateUpdate', async (oldState, newState) => {
   if (newState.member.user.bot) return;
+
+  // Skip users who should be handled by Nikos bot
+  const username = newState.member.user.username;
+  if (NIKOS_USERS.includes(username)) {
+    console.log(`⏭️ Skipping ${username} - handled by Nikos bot`);
+    return;
+  }
 
   const memberName = newState.member.user.tag;
 
