@@ -253,6 +253,118 @@ function startAutoPlayInterval() {
   }, INTERVAL_MS);
 }
 
+// Track recently departed users to prevent spam
+const recentlyLeftUsers = new Map();
+
+// Clean up old entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of recentlyLeftUsers.entries()) {
+    if (now - timestamp > 60000) {
+      recentlyLeftUsers.delete(key);
+    }
+  }
+}, 300000);
+
+// Play exit sound (uses rodulis_exit*.mp3 files)
+async function playExitSound(channel, memberName) {
+  const BOT_NAME = 'Rodis Bot';
+  const soundsDir = path.join(__dirname, 'sounds');
+
+  // Find exit sounds
+  let exitSounds = [];
+  try {
+    const files = fs.readdirSync(soundsDir);
+    exitSounds = files.filter(file => file.startsWith('rodulis_exit') && file.endsWith('.mp3'));
+
+    if (exitSounds.length === 0) {
+      console.log('👋 No rodulis_exit sounds found, skipping farewell');
+      return;
+    }
+    console.log(`Found ${exitSounds.length} exit sound(s): ${exitSounds.join(', ')}`);
+  } catch (error) {
+    console.error('Error reading sounds directory:', error);
+    return;
+  }
+
+  // Wait for lock
+  await waitForLock(BOT_NAME);
+  if (!acquireLock(BOT_NAME)) {
+    console.error(`${BOT_NAME}: Failed to acquire lock for exit sound`);
+    return;
+  }
+
+  try {
+    const connection = joinVoiceChannel({
+      channelId: channel.id,
+      guildId: channel.guild.id,
+      adapterCreator: channel.guild.voiceAdapterCreator,
+      selfDeaf: false,
+      selfMute: false,
+    });
+
+    await entersState(connection, VoiceConnectionStatus.Ready, 20000);
+
+    const player = createAudioPlayer();
+    const randomSound = exitSounds[Math.floor(Math.random() * exitSounds.length)];
+    const soundPath = path.join(__dirname, 'sounds', randomSound);
+
+    console.log(`👋 Playing exit sound: ${randomSound} for ${memberName}`);
+    const resource = createAudioResource(soundPath, { inlineVolume: true });
+    if (resource.volume) resource.volume.setVolume(1.0);
+
+    player.play(resource);
+    connection.subscribe(player);
+
+    player.on(AudioPlayerStatus.Idle, () => {
+      setTimeout(() => {
+        connection.destroy();
+        releaseLock();
+      }, 1000);
+    });
+
+    player.on('error', error => {
+      console.error('Exit sound player error:', error);
+      connection.destroy();
+      releaseLock();
+    });
+  } catch (error) {
+    console.error('Exit sound connection error:', error.message);
+    releaseLock();
+  }
+}
+
+// Listen for voice state updates (user leaves channel) - ONLY Rodulis plays farewell
+client.on('voiceStateUpdate', async (oldState, newState) => {
+  // Check if user left a voice channel (was in one, now is not or moved to different)
+  if (oldState.channelId && oldState.channelId !== newState.channelId) {
+    const member = oldState.member;
+    const leftChannel = oldState.channel;
+
+    // Skip bots
+    if (member.user.bot) return;
+
+    // Check if there are still users in the channel to hear the sound
+    const remainingUsers = leftChannel.members.filter(m => !m.user.bot).size;
+    if (remainingUsers === 0) {
+      console.log(`👋 ${member.user.username} left ${leftChannel.name}, but no one left to hear farewell`);
+      return;
+    }
+
+    // Check cooldown (1 minute per user per channel)
+    const leaveKey = `${member.id}-${leftChannel.id}`;
+    if (recentlyLeftUsers.has(leaveKey)) {
+      console.log(`⏭️ Skipping farewell for ${member.user.username} - recently played`);
+      return;
+    }
+
+    console.log(`👋 ${member.user.username} left ${leftChannel.name}! Playing farewell sound...`);
+    recentlyLeftUsers.set(leaveKey, Date.now());
+
+    await playExitSound(leftChannel, member.user.username);
+  }
+});
+
 // Listen for the "rodis" keyword trigger
 client.on('messageCreate', async (message) => {
   // Ignore bot messages
