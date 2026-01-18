@@ -44,9 +44,6 @@ async function initBot() {
 client.once('ready', () => {
   console.log(`Rodis Bot is ready! Logged in as ${client.user.tag}`);
   console.log(`Monitoring messages in ${client.guilds.cache.size} server(s)`);
-
-  // Start the 20-minute interval timer
-  startAutoPlayInterval();
 });
 
 async function playRodisSound(channel, memberName, retryCount = 0) {
@@ -212,46 +209,6 @@ async function playRodisSound(channel, memberName, retryCount = 0) {
   }
 }
 
-// Function to find a voice channel with users
-function findVoiceChannelWithUsers() {
-  // Iterate through all guilds the bot is in
-  for (const guild of client.guilds.cache.values()) {
-    // Find voice channels that have at least one non-bot user
-    const voiceChannels = guild.channels.cache.filter(
-      channel => channel.type === 2 && // 2 = Voice Channel
-      channel.members.size > 0 &&
-      channel.members.some(member => !member.user.bot)
-    );
-
-    if (voiceChannels.size > 0) {
-      // Return a random voice channel with users
-      const channelsArray = Array.from(voiceChannels.values());
-      const randomChannel = channelsArray[Math.floor(Math.random() * channelsArray.length)];
-      return randomChannel;
-    }
-  }
-
-  return null; // No voice channels with users found
-}
-
-// Function to start the 20-minute auto-play interval
-function startAutoPlayInterval() {
-  const INTERVAL_MS = 20 * 60 * 1000; // 20 minutes in milliseconds
-
-  console.log('🕐 Auto-play interval started: Rodis bot will play every 20 minutes when users are in voice channels');
-
-  setInterval(async () => {
-    const voiceChannel = findVoiceChannelWithUsers();
-
-    if (voiceChannel) {
-      const userCount = voiceChannel.members.filter(m => !m.user.bot).size;
-      console.log(`\n⏰ 20-minute timer triggered! Found ${userCount} user(s) in voice channel: ${voiceChannel.name}`);
-      await playRodisSound(voiceChannel, 'Auto-play');
-    } else {
-      console.log('\n⏰ 20-minute timer triggered, but no users in voice channels. Skipping...');
-    }
-  }, INTERVAL_MS);
-}
 
 // Track recently departed users to prevent spam
 const recentlyLeftUsers = new Map();

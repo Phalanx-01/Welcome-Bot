@@ -163,9 +163,6 @@ client.once('ready', () => {
   console.log(`✨ Nikos Bot is ready! Logged in as ${client.user.tag}`);
   console.log(`📊 Monitoring ${client.guilds.cache.size} server(s) for voice events and messages`);
   console.log('🎯 Special sounds configured for: liakos74, p.theodoridis04, ektelestis2012, valtonera1972_53348, skywalker_lmr');
-
-  // Start 30-minute auto-play interval
-  startAutoPlayInterval();
 });
 
 // Voice state update event (user joins voice channel)
@@ -178,6 +175,13 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     // Skip if it's a bot
     if (member.user.bot) return;
 
+    // Only handle special users - normal users are handled by Rodulis bot
+    const isSpecialUser = USER_SOUND_PREFIX[member.user.username];
+    if (!isSpecialUser) {
+      console.log(`⏭️ Skipping ${member.user.username} - handled by Rodulis bot`);
+      return;
+    }
+
     // Create a unique key for this user join
     const joinKey = `${member.id}-${voiceChannel.id}`;
 
@@ -187,20 +191,12 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
       return;
     }
 
-    console.log(`🎊 ${member.user.username} joined ${voiceChannel.name}!`);
+    console.log(`🎊 Special user ${member.user.username} joined ${voiceChannel.name}!`);
 
     // Mark this user as recently joined
     recentlyJoinedUsers.set(joinKey, Date.now());
 
-    // Only wait if user is not in special user list (Welcome bot handles others first)
-    const isSpecialUser = USER_SOUND_PREFIX[member.user.username];
-    if (!isSpecialUser) {
-      const delay = Math.random() * 2000 + 1000;
-      console.log(`⏰ Waiting ${Math.round(delay)}ms before playing sound...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-
-    // Play sound for this user
+    // Play sound for this special user
     await playNikosSound(voiceChannel, `${member.user.username} joined`, member.user.username);
   }
 });
@@ -224,60 +220,6 @@ client.on('messageCreate', async message => {
   }
 });
 
-// Auto-play function (every 30 minutes)
-function startAutoPlayInterval() {
-  const INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
-
-  console.log('⏲️ Starting 30-minute auto-play interval for Nikos Bot');
-
-  setInterval(async () => {
-    try {
-      // Find a voice channel with users
-      const voiceChannel = findVoiceChannelWithUsers();
-
-      if (voiceChannel) {
-        const userCount = voiceChannel.members.filter(member => !member.user.bot).size;
-        console.log(`⏰ 30-minute timer triggered! Found ${userCount} user(s) in ${voiceChannel.name}`);
-
-
-        await playNikosSound(voiceChannel, 'Auto-play (30 min)', null); // null = generic sound only
-      } else {
-        console.log('⏰ 30-minute timer triggered, but no users in voice channels');
-      }
-    } catch (error) {
-      console.error('❌ Error in auto-play interval:', error);
-    }
-  }, INTERVAL_MS);
-
-  console.log(`✅ Auto-play scheduled: Every ${INTERVAL_MS / 1000 / 60} minutes`);
-}
-
-// Find a voice channel with users
-function findVoiceChannelWithUsers() {
-  const voiceChannels = [];
-
-  // Iterate through all guilds the bot is in
-  client.guilds.cache.forEach(guild => {
-    // Get all voice channels in this guild
-    guild.channels.cache
-      .filter(channel => channel.isVoiceBased() && channel.id !== guild.afkChannelId)
-      .forEach(channel => {
-        // Count non-bot members
-        const userCount = channel.members.filter(member => !member.user.bot).size;
-        if (userCount > 0) {
-          voiceChannels.push({ channel, userCount });
-        }
-      });
-  });
-
-  if (voiceChannels.length === 0) {
-    return null;
-  }
-
-  // Randomly select one of the channels with users
-  const selected = voiceChannels[Math.floor(Math.random() * voiceChannels.length)];
-  return selected.channel;
-}
 
 // Error handling
 process.on('unhandledRejection', error => {
